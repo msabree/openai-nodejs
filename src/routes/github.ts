@@ -4,6 +4,33 @@ import { Octokit } from "octokit";
 
 const router = express.Router();
 
+router.get('/repos', async (req, res) => {
+    const { token } = req.query;
+
+    if (!token) {
+        res.status(400).send('No token provided');
+        return;
+    }
+
+    // open ai test
+    const openai = new OpenAI();
+
+    // github integration test
+    const octokit = new Octokit({ auth: token ?? '' });
+
+    const {
+        data: { login },
+      } = await octokit.rest.users.getAuthenticated();
+      console.log("Hello, %s", login);
+      
+      // the token doesn't have access to private repos...
+      const response = await octokit.rest.repos.listForUser({
+        username: login,
+      })
+
+    res.send(response);
+})
+
 router.get('/commits', async (req, res) => {
     const { token } = req.query;
 
