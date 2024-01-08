@@ -5,10 +5,10 @@ import { Octokit } from "octokit";
 const router = express.Router();
 
 router.get('/repos', async (req, res) => {
-    const { token } = req.query;
+    const { token = '' } = req.query;
 
     if (!token) {
-        res.status(400).send('No token provided');
+        res.send({ success: false, message: 'No token provided' });
         return;
     }
 
@@ -21,12 +21,11 @@ router.get('/repos', async (req, res) => {
     const {
         data: { login },
       } = await octokit.rest.users.getAuthenticated();
-      console.log("Hello, %s", login);
       
-      // the token doesn't have access to private repos...
-      const response = await octokit.rest.repos.listForUser({
+    const response = await octokit.rest.repos.listForAuthenticatedUser({
         username: login,
-      })
+        visibility: 'all',
+    })
 
     res.send(response);
 })
@@ -35,7 +34,7 @@ router.get('/commits', async (req, res) => {
     const { token } = req.query;
 
     if (!token) {
-        res.status(400).send('No token provided');
+        res.send({ success: false, message: 'No token provided' });
         return;
     }
 
