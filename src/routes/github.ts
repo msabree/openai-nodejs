@@ -25,6 +25,7 @@ router.get('/repos', async (req, res) => {
     const response = await octokit.rest.repos.listForAuthenticatedUser({
         username: login,
         visibility: 'all',
+        affiliation: 'owner',
     })
 
     res.send(response);
