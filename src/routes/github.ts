@@ -4,38 +4,67 @@ import { Octokit } from "octokit";
 
 const router = express.Router();
 
-router.get('/repos', async (req, res) => {
-    const { token = '' } = req.query;
+router.get('/user', async (req, res) => {
+  const { token = '', username = '' } = req.query;
 
-    if (!token) {
-        res.send({ success: false, message: 'No token provided' });
+  if (!username) {
+      res.send({ success: false, message: 'No username provided' });
+      return;
+  }
+
+  // open ai test
+  const openai = new OpenAI();
+
+  // fallback to our token... 
+  // later we can allow users to auth to get private repos and originazation data
+  const octokit = new Octokit({ auth: token ?? process.env.GITHUB_TOKEN });
+
+  const response = await octokit.rest.users.getByUsername({
+      username: username as string,
+  });
+
+  res.send(response);
+})
+
+router.get('/repos', async (req, res) => {
+    const { token = '', username = '' } = req.query;
+
+    if (!token && !username) {
+        res.send({ success: false, message: 'No token or username provided' });
         return;
     }
 
-    // open ai test
-    const openai = new OpenAI();
-
-    // github integration test
-    const octokit = new Octokit({ auth: token ?? '' });
-
-    const {
+    // fallback to our token... 
+    // later we can allow users to auth to get private repos and originazation data
+    const octokit = new Octokit({ auth: token ?? process.env.GITHUB_TOKEN });
+      
+    if(token){
+      const {
         data: { login },
       } = await octokit.rest.users.getAuthenticated();
-      
-    const response = await octokit.rest.repos.listForAuthenticatedUser({
+      const response = await octokit.rest.repos.listForAuthenticatedUser({
         username: login,
         visibility: 'all',
         affiliation: 'owner',
-    })
+      })
 
-    res.send(response);
+      res.send(response);
+    }
+    else{
+      const response = await octokit.rest.repos.listForUser({
+        username: username as string,
+        type: 'owner',
+      })
+
+      res.send(response);
+    }
 })
 
 router.get('/commits', async (req, res) => {
-    const { token } = req.query;
+    const { token, repo } = req.query;
 
-    if (!token) {
-        res.send({ success: false, message: 'No token provided' });
+    if (!token || !repo) {
+        res.send({ success: false, message: 'No token and/or repo provided' });
         return;
     }
 
@@ -53,7 +82,7 @@ router.get('/commits', async (req, res) => {
       // the token doesn't have access to private repos...
       const response = await octokit.rest.repos.listCommits({
         owner: login,
-        repo: "standup-gpt"
+        repo: repo as string,
       })
     
       const commits = [];
@@ -68,7 +97,7 @@ router.get('/commits', async (req, res) => {
         messages: [
           {
             "role": "system",
-            "content": " Summarize work in 2-3 bullet points. Make it sound like a human wrote it."
+            "content": "Summarize work in 2-3 sentences. Make it sound like i am very smart."
           },
           {
             "role": "user",
